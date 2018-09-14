@@ -1,0 +1,8 @@
+{{ exec }} {{ debug_flags }} \
+    {{ py_script }} --script=/home/wubi/parsec_scripts/{{ bench_marks }}_{{ cpu_num }}c_{{cfg_type}}.rcS \
+    -n {{ cpu_num }} \
+    {{ bench_flags }} \
+    {{ flags }} \
+    {{ cfg_flags }} \
+    2>&1
+
