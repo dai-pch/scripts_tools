@@ -1,7 +1,6 @@
 #!python3
 
 import argparse
-import json
 import re
 import os
 import os.path as path
@@ -10,6 +9,8 @@ from openpyxl import Workbook
 from common_script import load_cfg, Executor, proc_meta
 from tree import Tree
 
+
+normal_indicator = "__normal$"
 
 def parse_contents(src, items_cfg, executor):
     res = {}
@@ -25,6 +26,9 @@ def parse_contents(src, items_cfg, executor):
             # print(item_name)
             # print(item_value)
             res[item_name] = item_value
+            if "normal-by" in item_cfg:
+                normal_name = normal_indicator + item_name
+                res[normal_name] = (item_value, item_cfg["normal-by"])
     return res
 
 def parse_name(regex, name):
@@ -65,20 +69,39 @@ def parse_folder(folder_path, cfg, executor, res=dict()):
     res = Tree.from_dict(res)
     return res
 
-def data_proc(data):
-    base_line_cls = 'LRU_NUCA'
-    for bench_dist in data.values():
-        for cls_dist in bench_dist.values():
-            base_line = cls_dist[base_line_cls]
-            ipcs = filter(lambda x: re.search('ipc|miss_rate', x[0]) is not None, base_line.items())
-            for cls, stats_dict in cls_dist.items():
-                if cls == base_line_cls:
-                    for key, _ in ipcs:
-                        stats_dict[key + '_normal'] = 1.0
-                else:
-                    for key, base in ipcs:
-                        stats_dict[key + '_normal'] = float(stats_dict[key]) / float(base)
+def post_proc(data):
+    proc_normal(data)
     return data
+
+def proc_normal(data):
+    # find normal items
+    normal_items = []
+    def get_normal_node(node):
+        nonlocal normal_items
+        if node.name.startswith(normal_indicator):
+            normal_items.append(node)
+    data.root.depth_first_traverse(func_leaf=get_normal_node)
+    # proc
+    for node in normal_items:
+        value, ref_path = node.data
+        cur = node
+        ref = None
+        while cur:
+            ref = cur.get_child_by_path(ref_path)
+            if ref:
+                break
+            cur = cur.get_parent()
+        rem_path = Tree.extract_path(cur, node)
+        if len(rem_path) < len(ref_path):
+            print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
+            continue
+        rem_path = rem_path[len(ref_path):]
+        ref = ref.get_child_by_path(rem_path)
+        if ref:
+            print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
+            continue
+        node.name = node.name[len(normal_indicator):] + "_normal"
+        node.data = float(value) / float(ref.data)
 
 def gen_blk(v, row_n, ws):
     # scan col item
@@ -151,7 +174,7 @@ def run():
     proc_meta(args, cfg["meta"], executor)
     cfg = cfg["config"]
     data = parse_folder(args.dir, cfg, executor)
-    # data = data_proc(data)
+    data = post_proc(data)
     xslx_cfg = cfg["xslx"]
     tbs = gen_tb(data, args.default_name, xslx_cfg["book"], xslx_cfg["sheet"])
     write_tbs(tbs, sys.argv[1])

@@ -74,6 +74,21 @@ class TreeNode(object):
                 child = self.add_child(None, key)
                 child.extend_dict(value)
 
+    def get_child_by_name(self, name):
+        for child in self.__children:
+            if child.name == name:
+                return child
+        return None
+
+    def get_child_by_path(self, path):
+        if not path:
+            return self
+        node = self.get_child_by_name(path.pop(0))
+        if node:
+            return node.get_child_by_path(path)
+        else:
+            return None
+
     def __str__(self):
         return "{name: " + str(self.name) + ", data: " + str(self.data) + ", children: " + ", ".join([str(child) for child in self.__children]) + "}"
 
@@ -98,6 +113,17 @@ class Tree(object):
 
     def tree_depth(self):
         return self.root.get_level()
+
+    @staticmethod
+    def extract_path(ancestor, node):
+        path = []
+        while node:
+            if not node is ancestor:
+                path = [node.name] + path
+                node = node.get_parent()
+            else:
+                break
+        return path
 
     @staticmethod
     def from_dict(dic_root, root_name=None):
