@@ -10,10 +10,17 @@ class TreeNode(object):
             self.given_to(parent)
 
     def given_to(self, parent):
-        if not self.__parent is None:
-            self.__parent.__children.remove(self)
-        self.__parent = parent
-        parent.__children.add(self)
+        parent.adapt_child(self)
+
+    def adapt_childs(self, nodes):
+        for n in nodes.copy():
+            self.adapt_child(n)
+
+    def adapt_child(self, node):
+        if not node.__parent is None:
+            node.__parent.__children.remove(node)
+        node.__parent = self
+        self.__children.add(node)
 
     def get_depth(self):
         if self.__parent is None:
@@ -66,6 +73,9 @@ class TreeNode(object):
                 node_list += child.get_next_n_nodes(depth - 1)
             return map(lambda arg: ([arg[1].name] + arg[0], arg[1]), node_list)
 
+    def absorb_tree(self, tree):
+        self.adapt_childs(tree.root.__children)
+
     def extend_dict(self, dic):
         if not isinstance(dic, dict):
             self.data = dic
@@ -74,23 +84,27 @@ class TreeNode(object):
                 child = self.add_child(None, key)
                 child.extend_dict(value)
 
-    def get_child_by_name(self, name):
+    def get_child_by_name(self, name, set_default=False):
         for child in self.__children:
             if child.name == name:
                 return child
+        if set_default:
+            return self.add_child(None, name)
         return None
 
     def get_child_by_path(self, path):
         if not path:
             return self
-        node = self.get_child_by_name(path.pop(0))
+        node = self.get_child_by_name(path[0])
+        if len(path) == 1:
+            return node
         if node:
-            return node.get_child_by_path(path)
+            return node.get_child_by_path(path[1:])
         else:
             return None
 
     def __str__(self):
-        return "{name: " + str(self.name) + ", data: " + str(self.data) + ", children: " + ", ".join([str(child) for child in self.__children]) + "}"
+        return "{name: " + str(self.name) + ", data: " + str(self.data) + ", children: [" + ", ".join([str(child) for child in self.__children]) + "]}"
 
     def display(self, level=0):
         pre = ''

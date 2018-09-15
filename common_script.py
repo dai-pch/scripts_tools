@@ -70,6 +70,8 @@ class Executor(object):
             script = split_end[0]
             tail = split_end[1]
             run_res = self.evaluate_indep(script)
+            if run_res is None:
+                run_res = ''
             if isinstance(run_res, str):
                 value = head + run_res + tail
             else:
