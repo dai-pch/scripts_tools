@@ -106,7 +106,7 @@ def proc_normal(data):
 def gen_blk(v, row_n, ws):
     # scan col item
     col_items = v.get_next_n_nodes(v.get_level()-1)
-    col_items = [n.name for _, n in col_items]
+    col_items = list(set([n.name for _, n in col_items]))
     # add col name
     col_items.sort()
     for idy, col_item in enumerate(col_items):
