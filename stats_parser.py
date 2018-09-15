@@ -12,8 +12,21 @@ from tree import Tree
 
 normal_indicator = "__normal$"
 
+class PsudueData(object):
+    def __str__(self):
+        return 'not found'
+
+class NormalData(PsudueData):
+    def __init__(self, real_node, ref_path):
+        self.real_node = real_node
+        self.ref_path = ref_path
+
+    @staticmethod
+    def get_name(name):
+        return name + '_normal'
+
 def parse_contents(src, items_cfg, executor):
-    res = {}
+    res = Tree()
     for idx, item_cfg in enumerate(items_cfg):
         reg = item_cfg["regex"]
         search_iter = re.finditer(reg, src)
@@ -25,10 +38,10 @@ def parse_contents(src, items_cfg, executor):
             item_value = executor.proc_embd_str(item_value)
             # print(item_name)
             # print(item_value)
-            res[item_name] = item_value
+            node = res.root.add_child(item_value, item_name)
             if "normal-by" in item_cfg:
-                normal_name = normal_indicator + item_name
-                res[normal_name] = (item_value, item_cfg["normal-by"])
+                normal_name = NormalData.get_name(item_name) 
+                res.root.add_child(NormalData(node, item_cfg["normal-by"]), normal_name) 
     return res
 
 def parse_name(regex, name):
@@ -38,7 +51,7 @@ def parse_name(regex, name):
         raise ValueError('File name error.')
     return sr
 
-def parse_file(file_path, cfg, executor, res=dict()):
+def parse_file(file_path, cfg, executor, res=Tree()):
     f_dir, f_name = path.split(file_path)
     name_match = parse_name(cfg["file_name"], f_name)
     if not name_match:
@@ -48,17 +61,16 @@ def parse_file(file_path, cfg, executor, res=dict()):
     c = parse_contents(f.read(), cfg["items"], executor)
     f.close()
     # save
-    dic = res
+    cur = res.root
     for hier in cfg["hierachy"]:
         hier_a = executor.proc_embd_str(hier)
-        dic.setdefault(hier_a, dict())
-        dic = dic[hier_a] 
-    dic.update(c)
+        cur = cur.get_child_by_name(hier_a, set_default=True)
+    cur.absorb_tree(c)
     # print(dic)
     # print(res)
     return res
 
-def parse_folder(folder_path, cfg, executor, res=dict()):
+def parse_folder(folder_path, cfg, executor, res=Tree()):
     for root, dirs, files in os.walk(folder_path):
         for f in files:
             f_path = path.join(root, f)
@@ -66,7 +78,7 @@ def parse_folder(folder_path, cfg, executor, res=dict()):
                 res = parse_file(f_path, cfg, executor, res)
             except ValueError as e:
                 continue
-    res = Tree.from_dict(res)
+    # res = Tree.from_dict(res)
     return res
 
 def post_proc(data):
@@ -78,12 +90,12 @@ def proc_normal(data):
     normal_items = []
     def get_normal_node(node):
         nonlocal normal_items
-        if node.name.startswith(normal_indicator):
+        if isinstance(node.data, NormalData):
             normal_items.append(node)
     data.root.depth_first_traverse(func_leaf=get_normal_node)
     # proc
     for node in normal_items:
-        value, ref_path = node.data
+        real_node, ref_path = node.data.real_node, node.data.ref_path
         cur = node
         ref = None
         while cur:
@@ -91,17 +103,19 @@ def proc_normal(data):
             if ref:
                 break
             cur = cur.get_parent()
-        rem_path = Tree.extract_path(cur, node)
+        rem_path = Tree.extract_path(cur, real_node)
         if len(rem_path) < len(ref_path):
             print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
             continue
         rem_path = rem_path[len(ref_path):]
-        ref = ref.get_child_by_path(rem_path)
-        if ref:
+        if not ref:
             print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
             continue
-        node.name = node.name[len(normal_indicator):] + "_normal"
-        node.data = float(value) / float(ref.data)
+        ref = ref.get_child_by_path(rem_path)
+        if not ref:
+            print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
+            continue
+        node.data = float(real_node.data) / float(ref.data)
 
 def gen_blk(v, row_n, ws):
     # scan col item
