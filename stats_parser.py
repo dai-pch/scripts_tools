@@ -80,49 +80,6 @@ def data_proc(data):
                         stats_dict[key + '_normal'] = float(stats_dict[key]) / float(base)
     return data
 
-def dic_depth(dic):
-    # print(dic)
-    n = 0
-    c = dic
-    while True:
-        if isinstance(c, dict) and len(c) > 0:
-            n += 1
-            c = list(dic.values())[0]
-            dic = c
-        else:
-            break
-    return n
-
-def trav_dict(dic, n, call_back, default_str=""):
-    items = [(default_str, dic)]
-    for depth in range(n):
-        items_n = []
-        for name, dic in items:
-            for k, v in dic.items():
-                items_n.append(("-".join(filter(lambda x: x != "", [name, k])), v))
-        items = items_n
-    res = []
-    for name, v in items:
-        r = call_back(name, v)
-        res.append(r)
-    return res
-
-def depth_trav_dict(root, max_depth=-1, leaf_func=None, pre_func=None, post_func=None):
-    # print("travdict: ", root)
-    # print("depth: ", max_depth)
-    if pre_func:
-        pre_func(root)
-    if (max_depth == 0 or not isinstance(root, dict)): # leaf
-        if leaf_func:
-            leaf_func(root, max_depth)
-        if post_func:
-            post_func(root, max_depth)
-    else:
-        for k, v in root.items():
-            depth_trav_dict(v, max_depth-1, leaf_func, pre_func, post_func)
-            if post_func:
-                post_func(root, max_depth)
-
 def gen_blk(v, row_n, ws):
     # scan col item
     col_items = v.get_next_n_nodes(v.get_level()-1)
@@ -164,7 +121,6 @@ def gen_wb(name, data, ws_n, row_n):
     return (name, wb)
 
 def gen_tb(data, d_name, wb_n=0, ws_n=1):
-    # print(dic_depth(data))
     data.root.name = d_name
     col_n = 1
     assert(col_n + wb_n + ws_n <= data.tree_depth())
