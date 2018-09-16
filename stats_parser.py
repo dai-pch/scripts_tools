@@ -57,6 +57,7 @@ def parse_file(file_path, cfg, executor, res=Tree()):
     if not name_match:
         return res
     executor.set_var("file_name_match", name_match.groups())
+    executor.set_var("item", name_match)
     f = open(file_path, 'r')
     c = parse_contents(f.read(), cfg["items"], executor)
     f.close()
