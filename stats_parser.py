@@ -36,10 +36,18 @@ def parse_contents(src, items_cfg, executor):
             executor.set_var("match", search_res.groups())
             item_name = executor.proc_embd_str(item_name)
             item_value = executor.proc_embd_str(item_value)
+            value_type = "str"
+            if "type" in item_cfg:
+                value_type = item_cfg["type"]
+            if value_type == 'int':
+                item_value=int(item_value)
+            elif value_type == 'float':
+                item_value=float(item_value)
             # print(item_name)
             # print(item_value)
             node = res.root.add_child(item_value, item_name)
             if "normal-by" in item_cfg:
+                assert(hasattr(item_value, '__truediv__'))
                 normal_name = NormalData.get_name(item_name) 
                 res.root.add_child(NormalData(node, item_cfg["normal-by"]), normal_name) 
     return res
