@@ -1,8 +1,13 @@
+#!/bin/bash
+
+[[ -e m5out/stats.txt ]] && rm m5out/stats.txt
 {{ exec }} {{ debug_flags }} \
-    {{ py_script }} --script=/home/wubi/parsec_scripts/{{ bench_marks }}_{{ cpu_num }}c_{{cfg_type}}.rcS \
+    {{ py_script }}  --script=/home/wubi/parsec_scripts/{{ bench_marks }}_{{ cpu_num }}c_{{parsec_type}}.rcS \
     -n {{ cpu_num }} \
     {{ bench_flags }} \
     {{ flags }} \
     {{ cfg_flags }} \
+    --checkpoint-restore=1 --standard-switch 1 -W {{warm_instr}} -I {{ instr_num }} \
+    --checkpoint-dir={{project_root}}/boot_ckpts_cpu{{cpu_num}} \
     2>&1
 

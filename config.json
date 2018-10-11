@@ -5,38 +5,34 @@ import random \n
 "
     },
     "common": {
-        "project_root": "/home/wubi/gem5-pc",
+        "project_root": "/home/wubi/gem5-stable_2015_09_03",
         "exec": "<% project_root %>/build/ALPHA/gem5.opt",
         "parsec_script": "<% project_root %>/configs/example/fs.py",
         "py_script": "<% parsec_script %>",
-        "debug_flags": "--debug-flags=Cache",
+        "_debug_flags": "--debug-flags=Cache",
         "parsec_benchs": ["blackscholes", "bodytrack", "canneal", "dedup", "facesim", "ferret", "fluidanimate", "freqmine", "streamcluster", "swaptions", "vips", "x264", "rtview"],
         "bench_flags": "",
         "warm_instr": 200000000,
-        "instr_num": 30000000,
+        "instr_num": 50000000,
         "bench_marks": "<% parsec_benchs %>",
-        "flags": "--cpu-type=detailed --cpu-clock=3.3GHz --mem-size=2GB --caches --l1i_size=128kB --l1d_size=128kB --l2cache --l2_size=16MB --l2_assoc=8 --l2-basic-lat=4 --l2-delta-lat=1 --l2-loc-write-cool-lat=27 <% mram_flags if mram else non_mram_flags %> ",
-        "non_mram_flags": "--l2-loc-write-hot-lat=27 ",
-        "mram_flags": "--l2-loc-write-hot-lat=20 ",
+        "flags": "--cpu-type=detailed --cpu-clock=3.3GHz --mem-size=1GB --caches --l1i_size=128kB --l1d_size=128kB --l2cache --l2mram --l2_size=16MB --l2_assoc=8 --l1-write-buffers=<% write_buffers %> --l2-enable-bank --l2-num-banks=<% bank_num %>",
         "cpu_num": "<% [1, 4, 8] %>",
-        "cfg_type": "simlarge"
+        "write_buffers": [1, 2, 4, 8],
+        "bank_num": 64,
+        "parsec_type": "simlarge"
     },
     "config": {
-        "LRU_SWAP": {
-            "cfg_flags": "--l2_tags=LRU_SWAP",
-            "mram": false
+        "Word": {
+            "cfg_flags": "--l2mram-write-mode=Word"
         },
-        "LRU_SWAP-mram": {
-            "cfg_flags": "--l2_tags=LRU_SWAP",
-            "mram": true
+        "Normal": {
+            "cfg_flags": "--l2mram-write-mode=Normal"
         },
-        "LRU_STATIC-mram": {
-            "cfg_flags": "--l2_tags=LRU_STATIC",
-            "mram": true
+        "ReadBeforeWrite": {
+            "cfg_flags": "--l2mram-write-mode=ReadBeforeWrite"
         },
-        "T_SWAP-mram": {
-            "cfg_flags": "--l2_tags=T_SWAP",
-            "mram": true
+        "Line": {
+            "cfg_flags": "--l2mram-write-mode=Line"
         }
     }
 }
