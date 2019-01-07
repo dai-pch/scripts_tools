@@ -104,41 +104,64 @@ def preproc_config(args, executor, pre_cfg_config):
     run_begin = args.run_begin
     run_end = args.run_end
     res = []
-    for key, value in pre_cfg_config.items():
-        if isinstance(value, str) and (value.find(run_begin) >= 0):
-            # print("sub")
-            cfg_configs = []
+    key, value = None, None
+    find_code = False
+    for key_inter, value_inter in pre_cfg_config.items():
+        if (isinstance(value_inter, str) and (value_inter.find(run_begin) >= 0)) or isinstance(value_inter, list):
+            key = key_inter
+            value = value_inter
+            find_code = True
+            break
+    if not find_code:
+        return [("", pre_cfg_config)]
+    else:
+        # process
+        cfg_configs = []
+        # exec
+        if isinstance(value, str):
+            # cut into 3 seg: head, script, tail
             split_begin = value.split(run_begin, 1)
-            head = split_begin[0]
-            tail = split_begin[1]
+            head = split_begin[0].lstrip()
+            tail = split_begin[1].rstrip()
             run_res = []
             split_end = tail.split(run_end, 1)
             script = split_end[0]
             tail = split_end[1]
+            # run
             run_res = executor.evaluate_indep(script)
             if isinstance(run_res, list):
-                value_tmp = head + "{}" + tail
                 for param in run_res:
-                    value = value_tmp.format(param)
+                    if head or tail:
+                        value_tmp = head + "{}" + tail
+                        value = value_tmp.format(param)
+                    else:
+                        value = param
                     cfg_config = deepcopy(pre_cfg_config)
                     cfg_config[key] = value
                     sub_name = "-" + str(param)
                     cfg_configs.append((sub_name, cfg_config))
             else:
-                if isinstance(run_res, int):
-                    run_res = str(run_res)
-                if isinstance(run_res, str):
-                    value = head + run_res + tail
-                    cfg_config = deepcopy(pre_cfg_config)
-                    cfg_config[key] = value
-                    cfg_configs.append(("", cfg_config))
+                if head or tail:
+                    value_tmp = head + "{}" + tail
+                    value = value_tmp.format(run_res)
                 else:
-                    raise Exception("Error: unexcepted return value: " + str(run_res) + ". Need either str or list.")
-            for cfg_name, cfg_config in cfg_configs:
-                recurs = preproc_config(args, executor, cfg_config)
-                res += map(lambda x: (cfg_name + x[0], x[1]), recurs)
-            return res
-    return [("", pre_cfg_config)]
+                    value = run_res
+                pre_cfg_config[key] = value
+                cfg_configs.append(('', pre_cfg_config))
+        elif isinstance(run_res, list):
+                for param in run_res:
+                    cfg_config = deepcopy(pre_cfg_config)
+                    cfg_config[key] = param
+                    sub_name = "-" + str(param)
+                    cfg_configs.append((sub_name, cfg_config))
+        elif isinstance(run_res, int) or isinstance(run_res, float):
+            raise Exception("Error: unexcepted control flow.")
+        else:
+            raise Exception("Error: unexcepted return value: " + str(run_res) + ". Need either str or list.")
+        for cfg_name, cfg_config in cfg_configs:
+            recurs = preproc_config(args, executor, cfg_config)
+            res += map(lambda x: (cfg_name + x[0], x[1]), recurs)
+        return res
 
 
 def render(args, env, cfgs):
