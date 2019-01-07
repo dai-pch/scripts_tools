@@ -69,7 +69,7 @@ class Executor(object):
 def get_env(args):
     template_paths = []
     if args.template_path:
-        template_path += args.template_path
+        template_paths += args.template_path
     # working directory
     template_paths.append(os.getcwd())
     # this python file path
@@ -141,30 +141,42 @@ def preproc_config(args, executor, pre_cfg_config):
     return [("", pre_cfg_config)]
 
 
-def generate_one_config(args, env, executor, cfg_name, pre_cfg_config):
-    cfg_configs = preproc_config(args, executor, pre_cfg_config)
+def render(args, env, cfgs):
     template = env.get_template(args.template)
     res = []
-    for cfg_subname, cfg_config in cfg_configs:
-        sp_contents = template.render(**cfg_config)
-        sp_name = cfg_name + cfg_subname
-        res.append((sp_name, sp_contents))
+    for name, cfg in cfgs:
+        if cfg["_script_name"]:
+            name = cfg["_script_name"]
+        res.append((name, template.render(**cfg)))
     return res
 
 
-def do_main(args):
-    cfg = load_cfg(args)
-    executor = Executor()
-    proc_meta(args, cfg.get("meta", dict()), executor)
-    env = get_env(args)
+def generate(args, executor, init, cfg_seq):
+    cfg_gen = [init]
+    # substitute cfg_seq into cfg_common sequencially
+    for cfg_to_be_substituted in cfg_seq:
+        cfg_gen_next = []
+        for cfg_name, cfg in cfg_gen:
+            executor.set_vars(cfg)
+            cfg.update(cfg_to_be_substituted)
+            cfg_gen_next += map(lambda x: (cfg_name + x[0], x[1]), preproc_config(args, executor, cfg))
+        cfg_gen = cfg_gen_next
+    return cfg_gen
+
+
+def proc_cfgs(args, cfg, executor):
     cfg_common = cfg["common"]
+    if isinstance(cfg_common, dict):
+        cfg_common = [cfg_common]
     res = []
     for cfg_name, cfg_config in cfg["config"].items():
-        cfg = deepcopy(cfg_common)
-        cfg.update(cfg_config)
-        cfg["config_name"] = cfg_name
-        executor.set_vars(cfg)
-        sps = generate_one_config(args, env, executor, cfg_name, cfg)
+        if isinstance(cfg_config, dict):
+            cfg_config = [cfg_config]
+        cfgs = cfg_common + cfg_config + [{"_script_name": cfg.get("name")}]
+        init_cfg = (cfg_name, {
+            "_config_name": cfg_name
+        })
+        sps = generate(args, executor, init_cfg, cfgs)
         res += sps
     return res
 
@@ -176,7 +188,7 @@ def get_cmd(is_sp2k, is_mram, benchs, tag):
 
 
 def write_script(spdir, sps):
-    for sp_name , sp_contents in sps:
+    for sp_name, sp_contents in sps:
         sp_path = os.path.join(spdir, sp_name + '.sh') 
         f = open(sp_path, 'w')
         f.write(sp_contents)
@@ -204,8 +216,15 @@ def test():
 def main():
     parser = get_argparser()
     args = parser.parse_args()
-    res = do_main(args)
-    write_script(args.dest_folder, res)
+    
+    cfg = load_cfg(args)
+    executor = Executor()
+    proc_meta(args, cfg.get("meta", dict()), executor)
+    cfgs = proc_cfgs(args, cfg, executor)
+    env = get_env(args)
+    scripts = render(args, env, cfgs) 
+    write_script(args.dest_folder, scripts)
+
 
 if __name__ == "__main__":
     main()
