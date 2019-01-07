@@ -12,7 +12,7 @@ fi
 cd $script_name
 
 function complete() {
-    cp $work_dir/$script_name/m5out/stats.txt $work_dir/result/$script_name.txt 
+    ls | grep -v "run.log" | xargs -I{} -P4 cp $work_dir/$script_name/{} $work_dir/result/ 
     cp $work_dir/$script_name/run.log $work_dir/log/$script_name.log 
     cd $work_dir
     exit 0
@@ -20,7 +20,7 @@ function complete() {
 
 if [[ -f "run.log" ]]; then
     run_log_end=$(tail -n 1 run.log)
-    if [[ ${run_log_end} =~ "Exiting @ tick " ]]; then
+    if [[ ${run_log_end} =~ "Exit code: 0" ]]; then
         echo Skip ${work_dir}/$1 since it already have results.
         complete
         exit 0
@@ -28,6 +28,8 @@ if [[ -f "run.log" ]]; then
 fi
 
 echo run ${work_dir}/$1
+set -o pipefail
 $work_dir/$1 2>&1 |tee run.log
+echo "Exit code: $?" >> run.log 
 complete
 
