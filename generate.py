@@ -162,6 +162,7 @@ def do_main(args):
     for cfg_name, cfg_config in cfg["config"].items():
         cfg = deepcopy(cfg_common)
         cfg.update(cfg_config)
+        cfg["config_name"] = cfg_name
         executor.set_vars(cfg)
         sps = generate_one_config(args, env, executor, cfg_name, cfg)
         res += sps
