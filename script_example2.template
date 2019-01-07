@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source activate pytorch
+python /home/pc/workspace/train-ar/train.py -n{{epoch}} -t {{net_type}} -o {{net_out}} -s {{stats_out}} --loss-cut={{loss_cut}} 2>&1
+

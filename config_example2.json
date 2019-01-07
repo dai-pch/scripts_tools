@@ -1,0 +1,26 @@
+{
+    "meta": {
+        "context": "
+"
+    },
+    "name": "<%_config_name%>-<%loss_cut_p%>",
+    "common": [{
+            "epoch": 100,
+            "loss_cut_p": "<%list(range(0, 5))%>",
+            "net_type": "lenet-cifar10"
+        },
+        {
+            "loss_cut": "<% 'none' if loss_cut_p == 0 else str(loss_cut_p) + '%low' %>",
+            "net_out": "<% _config_name + '-' + str(loss_cut_p) %>"
+        },
+        {
+            "stats_out": "<% net_out %>"
+        }
+    ],
+    "config": {
+        "Lenet-CIFAR10": {
+            "net_type": "lenet-cifar10"
+        }
+    }
+}
+
