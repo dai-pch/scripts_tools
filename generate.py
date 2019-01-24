@@ -65,15 +65,24 @@ class Executor(object):
         res = eval(src, self.global_vars)
         return res
 
+def get_up_search_paths(origin_path):
+    paths = []
+    cur_path = os.path.abspath(origin_path)
+    paths.append(cur_path)
+    while (cur_path != os.path.abspath(r'/')):
+        cur_path = os.path.abspath(os.path.join(cur_path, '..'))
+        print(cur_path)
+        paths.append(cur_path)
+    return paths
 
 def get_env(args):
     template_paths = []
     if args.template_path:
         template_paths += args.template_path
     # working directory
-    template_paths.append(os.getcwd())
-    # this python file path
-    template_paths.append(sys.path[0])
+    this_path = os.path.abspath(os.getcwd())
+    template_paths += get_up_search_paths(this_path)
+
     tmp_loader = FileSystemLoader(template_paths)
     env = Environment(loader=tmp_loader)
     return env
@@ -84,9 +93,9 @@ def load_cfg(args):
     if args.config_path:
         cfg_paths += args.config_path
     # working directory
-    cfg_paths.append(os.getcwd())
-    # this python file path
-    cfg_paths.append(sys.path[0])
+    this_path = os.path.abspath(os.getcwd())
+    cfg_paths += get_up_search_paths(this_path)
+
     cfg_loader = FileLoader(cfg_paths)
     cfg_str = cfg_loader(args.config)
     cfg_str = cfg_str.replace('\r', '').replace('\n', '')
