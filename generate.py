@@ -33,7 +33,7 @@ class FileLoader(object):
                     f = open(filepath)
                     c = f.read()
                     f.close()
-                    return c
+                    return (c, filepath)
             raise Exception("File " + filename + " not found.")
         else:
             raise Exception("No path specific for search file" + filename)
@@ -71,7 +71,6 @@ def get_up_search_paths(origin_path):
     paths.append(cur_path)
     while (cur_path != os.path.abspath(r'/')):
         cur_path = os.path.abspath(os.path.join(cur_path, '..'))
-        print(cur_path)
         paths.append(cur_path)
     return paths
 
@@ -97,16 +96,23 @@ def load_cfg(args):
     cfg_paths += get_up_search_paths(this_path)
 
     cfg_loader = FileLoader(cfg_paths)
-    cfg_str = cfg_loader(args.config)
+    cfg_str, cfg_path = cfg_loader(args.config)
     cfg_str = cfg_str.replace('\r', '').replace('\n', '')
     cfg = json.loads(cfg_str)
-    return cfg
+    return (cfg, cfg_path)
 
 
-def proc_meta(args, cfg_meta, executor):
+def proc_meta(args, cfg_meta, executor, cfg_path):
     if cfg_meta["context"]:
         context = cfg_meta["context"]
         executor.execute(context)
+    if cfg_meta["template_path"]:
+        if isinstance(cfg_meta["template_path"], str):
+            t_path = [cfg_meta["template_path"]]
+        else:
+            t_path = cfg_meta["template_path"]
+        temp = [os.path.abspath(os.path.join(os.path.dirname(cfg_path), p)) for p in t_path]
+        args.template_path += temp
 
 
 def preproc_config(args, executor, pre_cfg_config):
@@ -196,7 +202,7 @@ def generate(args, executor, init, cfg_seq):
     return cfg_gen
 
 
-def proc_cfgs(args, cfg, executor):
+def proc_cfgs(args, cfg, executor, cfg_path):
     cfg_common = cfg["common"]
     if isinstance(cfg_common, dict):
         cfg_common = [cfg_common]
@@ -206,6 +212,7 @@ def proc_cfgs(args, cfg, executor):
             cfg_config = [cfg_config]
         cfgs = cfg_common + cfg_config + [{"_script_name": cfg.get("name")}]
         init_cfg = (cfg_name, {
+            "_config_file_path": os.path.abspath(cfg_path),
             "_config_name": cfg_name
         })
         sps = generate(args, executor, init_cfg, cfgs)
@@ -234,7 +241,7 @@ def get_argparser():
     parser.add_argument('-t','--template', type=str, default="script.template")
     parser.add_argument('-c','--config', type=str, default="config.json")
     parser.add_argument('-L','--config-path', type=list)
-    parser.add_argument('-I','--template-path', type=list)
+    parser.add_argument('-I','--template-path', type=list, default=[])
     parser.add_argument('--run-begin', default="<%")
     parser.add_argument('--run-end', default="%>")
     return parser
@@ -249,10 +256,10 @@ def main():
     parser = get_argparser()
     args = parser.parse_args()
     
-    cfg = load_cfg(args)
+    cfg, cfg_path = load_cfg(args)
     executor = Executor()
-    proc_meta(args, cfg.get("meta", dict()), executor)
-    cfgs = proc_cfgs(args, cfg, executor)
+    proc_meta(args, cfg.get("meta", dict()), executor, cfg_path)
+    cfgs = proc_cfgs(args, cfg, executor, cfg_path)
     env = get_env(args)
     scripts = render(args, env, cfgs) 
     write_script(args.dest_folder, scripts)
