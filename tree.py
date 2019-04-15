@@ -59,19 +59,19 @@ class TreeNode(object):
     def width_first_traverse(self, func):
         que = deque()
         que.append(self)
-        while not que.empty():
+        while que:
             cur = que.popleft()
             que.extend(cur.__children)
             func(cur)
     
     def get_next_n_nodes(self, depth):
         if depth == 0:
-            return [([], self)]
+            return [([self.name], self)]
         else:
             node_list = []
             for child in self.__children:
                 node_list += child.get_next_n_nodes(depth - 1)
-            return map(lambda arg: ([arg[1].name] + arg[0], arg[1]), node_list)
+            return map(lambda arg: ([self.name] + arg[0], arg[1]), node_list)
 
     def absorb_tree(self, tree):
         self.adapt_childs(tree.root.__children)

@@ -76,7 +76,7 @@ def parse_file(file_path, cfg, executor, res=Tree()):
         cur = cur.get_child_by_name(hier_a, set_default=True)
     cur.absorb_tree(c)
     # print(dic)
-    # print(res)
+    # res.display()
     return res
 
 def parse_folder(folder_path, cfg, executor, res=Tree()):
@@ -85,7 +85,7 @@ def parse_folder(folder_path, cfg, executor, res=Tree()):
             f_path = path.join(root, f)
             try:
                 res = parse_file(f_path, cfg, executor, res)
-            except ValueError as e:
+            except ValueError:
                 continue
     # res = Tree.from_dict(res)
     return res
@@ -163,7 +163,7 @@ def gen_ws(k, v, row_n, wb):
 def gen_wb(name, data, ws_n, row_n):
     wb = Workbook()
     ws_data = data.get_next_n_nodes(ws_n)
-    wss = list(map(lambda tp: gen_ws("-".join([name] + tp[0]), tp[1], row_n, wb), ws_data))
+    _ = list(map(lambda tp: gen_ws("-".join(tp[0][1:]), tp[1], row_n, wb), ws_data))
     return (name, wb)
 
 def gen_tb(data, d_name, wb_n=0, ws_n=1):
@@ -172,7 +172,7 @@ def gen_tb(data, d_name, wb_n=0, ws_n=1):
     assert(col_n + wb_n + ws_n <= data.tree_depth())
     row_n = data.tree_depth() - col_n - wb_n - ws_n - 1
     wb_data = data.root.get_next_n_nodes(wb_n)
-    wbs = list(map(lambda tp: gen_wb("-".join([d_name] + tp[0]), tp[1], ws_n, row_n), wb_data))
+    wbs = list(map(lambda tp: gen_wb("-".join(tp[0]), tp[1], ws_n, row_n), wb_data))
     return wbs
 
 def write_tbs(tbs, folder):

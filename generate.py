@@ -103,10 +103,10 @@ def load_cfg(args):
 
 
 def proc_meta(args, cfg_meta, executor, cfg_path):
-    if cfg_meta["context"]:
+    if "context" in cfg_meta:
         context = cfg_meta["context"]
         executor.execute(context)
-    if cfg_meta["template_path"]:
+    if "template_path" in cfg_meta:
         if isinstance(cfg_meta["template_path"], str):
             t_path = [cfg_meta["template_path"]]
         else:
