@@ -124,7 +124,7 @@ def proc_normal(data):
         if not ref:
             print("Warning: Can not find normal ref ", str(ref_path), " for ", node.name)
             continue
-        node.data = float(real_node.data) / float(ref.data)
+        node.data = float(real_node.data) / float(ref.data) if 0 !=ref.data else (0 if float(real_node.data) == 0 else float(Nan))
 
 def gen_blk(v, row_n, ws):
     # scan col item
