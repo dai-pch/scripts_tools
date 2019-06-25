@@ -1,5 +1,9 @@
 
 from collections import deque
+import json
+import numpy as np
+
+
 class TreeNode(object):
     def __init__(self, data=None, name=None, parent=None):
         self.__children = set()
@@ -103,20 +107,44 @@ class TreeNode(object):
         else:
             return None
 
+    def as_dict(self):
+        dic = {
+            "name": self.name,
+            "data": self.data if self.data else None,
+            "children": [child.as_dict() for child in self.__children]
+        }
+        return dic
+
+    def as_tensor(self):
+        if not self.__children:
+            return np.array(self.data)
+        else:
+            ds = []
+            cs = self.__children
+            cs = sorted(cs, key=lambda x: x.name)
+            for child in cs:
+                d = child.as_tensor()
+                if ds:
+                    try:
+                        assert(d.shape == ds[0].shape)
+                    except:
+                        print("Current name: ", self.name)
+                        print("New data shape: ", d.shape)
+                        print("Origin data shape:", ds[0].shape)
+                ds.append(d)
+            return np.array(ds)
+
     def __str__(self):
         return "{name: " + str(self.name) + ", data: " + str(self.data) + ", children: [" + ", ".join([str(child) for child in self.__children]) + "]}"
 
-    def display(self, level=0):
-        pre = ''
-        if level > 1:
-            pre = "| "*(level-1)
-        print(pre, end='')
-        if level > 0:
-            print('|-', end='')
-        print("o" + '"' + str(self.name) +'": ' + str(self.data))
-        for node in self.__children:
-            node.display(level+1)
-
+    def display(self, l_pre=''):
+        print(l_pre[:-2] + "|-o" + '"' + str(self.name) +'": ' + str(self.data))
+        for id, node in enumerate(self.__children):
+            if id == len(self.__children) - 1:
+                pre = l_pre + "  "
+            else:
+                pre = l_pre + "| "
+            node.display(pre)
 
 class Tree(object):
     def __init__(self):
@@ -127,6 +155,19 @@ class Tree(object):
 
     def tree_depth(self):
         return self.root.get_level()
+
+    def to_json(self):
+        return json.dumps(self.root.as_dict())
+
+    def to_json_file(self, f_path):
+        with open(f_path, 'w') as f:
+            json.dump(self.root.as_dict(), f)
+
+    def to_tensor(self):
+        return self.root.as_tensor()
+
+    def to_tensor_file(self, f_path):
+        np.savez_compressed(f_path, stats=self.to_tensor())
 
     @staticmethod
     def extract_path(ancestor, node):

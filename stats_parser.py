@@ -126,6 +126,17 @@ def proc_normal(data):
             continue
         node.data = float(real_node.data) / float(ref.data)
 
+def proc_average(data, level=1):
+    last_level_node = data.root.get_next_n_nodes(data.tree_depth)
+    for n in last_level_node:
+        s = 0
+        children = n.get_children()
+        for d in children:
+            s += d.data
+        ave = s / len(children)
+        n.data = ave
+
+
 def gen_blk(v, row_n, ws):
     # scan col item
     col_items = v.get_next_n_nodes(v.get_level()-1)
@@ -179,6 +190,11 @@ def write_tbs(tbs, folder):
     for name, tb in tbs:
         tb.save(path.join(folder, name + ".xlsx"))
 
+def dump_tree(tree, folder, name):
+    tree.to_json_file(path.join(folder, name + ".tree"))
+    tree.to_tensor_file(path.join(folder, name))
+    print(tree.to_tensor())
+
 def get_argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument('dir', type=str)
@@ -198,6 +214,7 @@ def run():
     cfg = cfg["config"]
     data = parse_folder(args.dir, cfg, executor)
     data = post_proc(data)
+    dump_tree(data, sys.argv[1], "stats_post_process")
     xslx_cfg = cfg["xslx"]
     tbs = gen_tb(data, args.default_name, xslx_cfg["book"], xslx_cfg["sheet"])
     write_tbs(tbs, sys.argv[1])
